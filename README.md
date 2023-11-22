@@ -1,3 +1,3 @@
 # bggn213_github
-My class work from BGGN213 at UC San Diego (Fall 2023)
+My class work from [BGGN213](https://bioboot.github.io/bggn213_F23/schedule/#15) at UC San Diego (Fall 2023)
 

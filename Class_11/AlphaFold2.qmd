@@ -1,0 +1,95 @@
+---
+title: "Class11: AlphaFold2 Analysis"
+author: "Job Rocha PID: A59023124 email: jrochahernandez@ucsd.edu"
+format: pdf
+---
+
+Here we post process and inspect our modelling results from AlphaFold2 (AF).
+
+My results from AF live in the folder/directory `HIV_dimer_23119`
+
+```{r}
+results_dir <- "HIV_dimer_23119/"
+
+pdb.files <- list.files(results_dir, pattern=".pdb", full.names=TRUE)
+```
+
+We first need to align and supperpose these PDB models and we can use the `pdbaln()` function for this:
+
+```{r}
+library(bio3d)
+pdbs <- pdbaln(pdb.files, fit=TRUE, exefile="msa")
+```
+## The RMSD matrix
+
+A common measure of structural dis-similarity is called RMSD (root mean square distance).
+
+```{r}
+rd <- rmsd(pdbs)
+rd
+```
+
+```{r}
+#install.packages("pheatmap")
+library(pheatmap)
+
+rownames(rd) <- paste0("m", 1:5)
+colnames(rd) <- paste0("m", 1:5)
+pheatmap(rd)
+```
+
+Let's view these in Mol*. Here we want the filled coords.
+
+```{r}
+xyz <- pdbfit(pdbs, outpath="fitted")
+```
+
+A full atom based fitting or supperposition did not work very wll because we have multiple chains that are in different conformations.
+
+I want to focus our supperposition on the most invariant part (the rigid "core" if you will).
+
+```{r}
+core <- core.find(pdbs)
+```
+
+```{r}
+core.inds <- core
+```
+
+```{r}
+xyz <- pdbfit(pdbs, inds=core.inds, outpath="core_fitted")
+```
+
+To evaluate how good multi-chain or multi-domain models are we need to look at the PAE scores (predicted aligned error).
+
+There are output as JSON format files. Let's find all their file names:
+
+```{r}
+pae_files <- list.files(results_dir, pattern="0.json", full.names=TRUE)
+```
+
+```{r}
+library(jsonlite)
+
+
+pae1 <- read_json(pae_files[1], simplifyVector=TRUE)
+pae5 <- read_json(pae_files[5], simplifyVector=TRUE)
+```
+
+```{r}
+pae1$max_pae
+pae5$max_pae
+```
+
+```{r}
+plot.dmat(pae5$pae, xlab="Residue No.", ylab="Residue No.")
+```
+
+```{r}
+plot.dmat(pae1$pae, xlab="Residue No.", ylab="Residue No.", zlim=c(0, 30))
+```
+
+# Main points
+
+We can AlphaFold on google compute infrastructure :-)
+We can read these results into R and process to help us make sense of these models and their PAE.

@@ -1,0 +1,321 @@
+---
+title: "Class 10 pt 2"
+author: "Job Rocha"
+format: html
+---
+
+# Class 10 pt 2. 
+
+# Structural Bioinformatics
+
+
+Today we are going to finish off Lab 10 on learning about and analysing protein structures.
+
+## Comparative structure analysis of Adenylate Kinase
+
+We will use the `bio3d` package for this analysis that starts with a single sequence.
+
+We will also use the 'msa' package from BioConductor. First we need to isntall the `BiocManager` we install it the same way as other packages with `intall.packages()` command.
+
+We use `BiocManager::install()` to install any other BioConductor package wee want - like `msa` in this case.
+
+```{r}
+library(bio3d)
+```
+
+
+First we will pick a sequence of interest - I will pick "1ale_A"
+```{r}
+aa <- get.seq("1ake_A")
+aa
+```
+
+I want to search for all related structures in the PDB database.
+```{r}
+#b <- blast.pdb(aa)
+```
+
+```{r}
+plot(b)
+```
+
+```{r}
+head(b$hit.tbl)
+```
+
+```{r}
+hits$pdb.id
+```
+
+> Side-note: Lets save our results thus far so we don't habe to run blast again.
+
+```{r}
+save(hits, b, file="blast_results.Rds")
+```
+
+```{r}
+load("blast_results.Rds")
+```
+
+Now we will download all these related structures from the database with `get.pdb()`
+```{r}
+# Download releated PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+## Align and superpose structures
+
+```{r}
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+## Principal Component Analysis 
+
+We can do a PCA on the coordinate data (i. e. the `$xyz` vallues) at all these structures
+
+```{r}
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+
+```{r}
+dim(pdbs$xyz)
+```
+
+
+```{r}
+mktrj(pc.xray, file="pcs_resutls.pdb")
+```
+
+
+```{r}
+plot(pc.xray, 1:2, pch=21, cex=1)
+```
+
+
+
+# 4. Comparative structure analysis of Adenylate Kinase
+
+The goal of this section is to perform principal component analysis (PCA) on the complete collection of Adenylate kinase structures in the protein data-bank (PDB).
+
+Adenylate kinase (often called simply Adk) is a ubiquitous enzyme that functions to maintain the equilibrium between cytoplasmic nucleotides essential for many cellular processes. Adk operates by catalyzing the reversible transfer of a phosphoryl group from ATP to AMP. This reaction requires a rate limiting conformational transition (i.e. change in shape). Here we analyze all currently available Adk structures in the PDB to reveal detailed features and mechanistic principles of these essential shape changing transitions.
+
+
+Figure 5. Adenylate kinase structure (PDB code: 1AKE) with a bound inhibitor molecule.
+
+The bio3d package pca() function provides a convenient interface for performing PCA of biomolecular structure data. As we have discussed in previous classes, PCA is a statistical approach used to transform large data-sets down to a few important components that usefully describe the directions where there is most variance. In terms of protein structures PCA can be used to capture major structural variations within a set of structures (a.k.a. structure ensemble). This can make interpreting major conformational states (such as ‘active’ and ‘inactive’ or ‘ligand bound’ and ‘un-bound’ states) and structural mechanisms for activation or regulation more clear.
+
+
+## Overview. 
+Starting from only one Adk PDB identifier (PDB ID: 1AKE) we will search the entire PDB for related structures using BLAST, fetch, align and superpose the identified structures, perform PCA and finally calculate the normal modes of each individual structure in order to probe for potential differences in structural flexibility.
+
+## Setup. 
+We will begin by first installing the packages we need for today’s session.
+
+```{r}
+# Install packages in the R console NOT your Rmd/Quarto file
+
+#install.packages("bio3d")
+#install.packages("devtools")
+#install.packages("BiocManager")
+
+#BiocManager::install("msa")
+#devtools::install_bitbucket("Grantlab/bio3d-view")
+```
+
+### Q10. Which of the packages above is found only on BioConductor and not CRAN? *msa package*
+
+### Q11. Which of the above packages is not found on BioConductor or CRAN? *bio3d-view* 
+
+### Q12. True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket? *TRUE*
+
+
+
+## Search and retrieve ADK structures
+
+Below we perform a blast search of the PDB database to identify related structures to our query Adenylate kinase (ADK) sequence. In this particular example we use function get.seq() to fetch the query sequence for chain A of the PDB ID 1AKE and use this as input to blast.pdb(). Note that get.seq() would also allow the corresponding UniProt identifier.
+
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+```
+
+```{r}
+aa
+```
+
+### Q13. How many amino acids are in this sequence, i.e. how long is this sequence? *214 aa*
+
+Now we can use this sequence as a query to BLAST search the PDB to find similar sequences and structures.
+```{r}
+# Blast or hmmer search 
+#b <- blast.pdb(aa)
+```
+
+
+**Side-note:** Due to the number of students in this class session this command, which uses online NCBI blast service, may time-out. If this happens please jump ahead to the next Side-note below to skip running the actual blast search.
+
+
+The function plot.blast() facilitates the visualization and filtering of the Blast results. It will attempt to set a seed position to the point of largest drop-off in normalized scores (i.e. the biggest jump in E-values). In this particular case we specify a cutoff (after initial plotting) of to include only the relevant E.coli structures:
+
+```{r}
+# Plot a summary of search results
+hits <- plot(b)
+```
+
+
+Figure 6: Blast results. Visualize and filter blast results through function plot.blast(). Here we proceed with only the top scoring hits (black).
+
+
+```{r}
+# List out some 'top hits'
+head(hits$pdb.id)
+```
+
+
+**Side-note:** If blast did not return results (likely due to the large number of simultaneous requests from the class) you can use the following vector of PDB IDs
+
+```{r}
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+
+The Blast search and subsequent filtering identified a total of 13 related PDB structures to our query sequence. The PDB identifiers of this collection are accessible through the $pdb.id attribute to the hits object (i.e. hits$pdb.id). Note that adjusting the cutoff argument (to plot.blast()) will result in a decrease or increase of hits.
+
+We can now use function get.pdb() and pdbslit() to fetch and parse the identified structures.
+```{r}
+# Download releated PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+## Align and superpose structures
+
+Next we will use the pdbaln() function to align and also optionally fit (i.e. superpose) the identified PDB structures.
+
+```{r}
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+Note that if you get an error msg above include the optional exefile="msa" input argument to pdbaln()
+
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+plot(pdbs, labels=ids)
+```
+
+Figure 7: Schematic representation of alignment. Grey regions depict aligned residues, while white depict gap regions. The red bar at the top depict sequence conservation.
+
+
+## Annotate collected PDB structures. 
+
+The function pdb.annotate() provides a convenient way of annotating the PDB files we have collected. Below we use the function to annotate each structure to its source species. This will come in handy when annotating plots later on:
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+```
+We can view all available annotation data:
+
+```{r}
+anno
+```
+
+## Principal component analysis
+
+Function pca() provides principal component analysis (PCA) of the structure data. PCA is a statistical approach used to transform a data set down to a few important components that describe the directions where there is most variance. In terms of protein structures PCA is used to capture major structural variations within an ensemble of structures.
+
+PCA can be performed on the structural ensemble (stored in the pdbs object) with the function pca.xyz(), or more simply pca().
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+Figure 9: Results of PCA on Adenylate kinase X-ray structures. Each dot represents one PDB structure.
+
+Function rmsd() will calculate all pairwise RMSD values of the structural ensemble. This facilitates clustering analysis based on the pairwise structural deviation:
+
+
+```{r}
+# Calculate RMSD
+rd <- rmsd(pdbs)
+
+# Structure-based clustering
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k=3)
+
+plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
+
+Figure 10: Projection of Adenylate kinase X-ray structures. Each dot represents one PDB structure.
+
+The plot shows a conformer plot – a low-dimensional representation of the conformational variability within the ensemble of PDB structures. The plot is obtained by projecting the individual structures onto two selected PCs (e.g. PC-1 and PC-2). These projections display the inter-conformer relationship in terms of the conformational differences described by the selected PCs.
+
+
+
+# 5. Optional further visualization. 
+
+To visualize the major structural variations in the ensemble the function mktrj() can be used to generate a trajectory PDB file by interpolating along a give PC (eigenvector):
+
+```{r}
+# Visualize first principal component
+pc1 <- mktrj(pc.xray, pc=1, file="pc_1.pdb")
+```
+
+You can open this file, pc_1.pdb, in Mol*. In a in web browser page visit https://molstar.org/viewer/ and “Open Files” from the left control panel selecting .
+
+Once loaded you can animate the structure and visualize the major structural variations along PC1 by clicking the “Play” icon and Start button (see below).
+
+You can also save a movie of this motion via the “Export Animation” menu option on the right control panel:
+
+Figure 11: Visualization of PC-1 in VMD. Trajectory PDB file is generated using mktrj().
+
+We can also plot our main PCA results with ggplot:
+
+```{r}
+#Plotting results with ggplot2
+library(ggplot2)
+library(ggrepel)
+
+df <- data.frame(PC1=pc.xray$z[,1], 
+                 PC2=pc.xray$z[,2], 
+                 col=as.factor(grps.rd),
+                 ids=ids)
+
+p <- ggplot(df) + 
+  aes(PC1, PC2, col=col, label=ids) +
+  geom_point(size=2) +
+  geom_text_repel(max.overlaps = 20) +
+  theme(legend.position = "none")
+p
+```
+
+
+# 6. Normal mode analysis [optional]. 
+
+Function nma() provides normal mode analysis (NMA) on both single structures (if given a singe PDB input object) or the complete structure ensemble (if provided with a PDBS input object). This facilitates characterizing and comparing flexibility profiles of related protein structures.
+
+```{r}
+# NMA of all structures
+modes <- nma(pdbs)
+```
+
+```{r}
+plot(modes, pdbs, col=grps.rd)
+```
+
+
+### Q14. What do you note about this plot? Are the black and colored lines similar or different? Where do you think they differ most and why? *They are different, specially around residues 50 and 150. I think this means inactive and active states of the protein, where the colored line represent the active and black one inactive.*
+
+
+Collectively these results indicate the existence of two major distinct conformational states for Adk. These differ by a collective low frequency displacement of two nucleotide-binding site regions that display distinct flexibilities upon nucleotide binding.
+
+**Important-Note:** Remember to save your Quarto document and Render to generate a HTML and PDF report for GradeScope.
